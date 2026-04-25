@@ -26,6 +26,29 @@ async function ghAPI(path, method = 'GET', body = null) {
   return res;
 }
 
+// Büyük dosyaları okumak için özel fonksiyon
+async function getFileContent(filePath) {
+  const response = await ghAPI(filePath);
+  if (!response.ok) return null;
+
+  const fileData = await response.json();
+
+  if (fileData.size > 1000000 && fileData.git_url) {
+    const gitResponse = await fetch(fileData.git_url, {
+      headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!gitResponse.ok) return null;
+    const gitData = await gitResponse.json();
+    return JSON.parse(Buffer.from(gitData.content, 'base64').toString());
+  }
+
+  if (fileData.content) {
+    return JSON.parse(Buffer.from(fileData.content, 'base64').toString());
+  }
+
+  return null;
+}
+
 module.exports = async function(req, res) {
   const path = req.url.replace('/api/posts', '');
   res.setHeader('Content-Type', 'application/json');
@@ -49,15 +72,21 @@ module.exports = async function(req, res) {
             const f = await ghAPI(`uyeler/${d.name}/bilgi.json`);
             if (f.ok) {
               const fData = await f.json();
-              const uData = JSON.parse(Buffer.from(fData.content, 'base64').toString());
+              // Büyük dosya kontrolü
+              let uData;
+              if (fData.size > 1000000 && fData.git_url) {
+                const gitRes = await fetch(fData.git_url, {
+                  headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
+                });
+                const gitData = await gitRes.json();
+                uData = JSON.parse(Buffer.from(gitData.content, 'base64').toString());
+              } else {
+                uData = JSON.parse(Buffer.from(fData.content, 'base64').toString());
+              }
               (uData.yazilar || []).forEach(p => {
                 allPosts.push({ 
-                  id: p.id, 
-                  title: p.title, 
-                  content: p.content, 
-                  author: p.author, 
-                  date: p.date, 
-                  reads: p.reads || 0 
+                  id: p.id, title: p.title, content: p.content, 
+                  author: p.author, date: p.date, reads: p.reads || 0 
                 });
               });
             }
@@ -81,15 +110,14 @@ module.exports = async function(req, res) {
       const dirs = await response.json();
       for (let d of dirs) {
         if (d.type === 'dir') {
-          const f = await ghAPI(`uyeler/${d.name}/bilgi.json`);
-          if (f.ok) {
-            const fData = await f.json();
-            const uData = JSON.parse(Buffer.from(fData.content, 'base64').toString());
+          const uData = await getFileContent(`uyeler/${d.name}/bilgi.json`);
+          if (uData) {
             const post = (uData.yazilar || []).find(p => p.id === postId);
             if (post) {
-              // Okunma sayısını artır
               post.reads = (post.reads || 0) + 1;
               const newContent = Buffer.from(JSON.stringify(uData, null, 2)).toString('base64');
+              const f = await ghAPI(`uyeler/${d.name}/bilgi.json`);
+              const fData = await f.json();
               await ghAPI(`uyeler/${d.name}/bilgi.json`, 'PUT', {
                 message: 'Okunma sayısı',
                 content: newContent,
@@ -120,14 +148,11 @@ module.exports = async function(req, res) {
     if (!title) { res.end(JSON.stringify({ success: false, message: 'Başlık gerekli' })); return; }
 
     try {
-      const f = await ghAPI(`uyeler/${payload.username}/bilgi.json`);
-      if (!f.ok) {
+      const userData = await getFileContent(`uyeler/${payload.username}/bilgi.json`);
+      if (!userData) {
         res.end(JSON.stringify({ success: false, message: 'Kullanıcı bulunamadı' }));
         return;
       }
-      
-      const fData = await f.json();
-      const userData = JSON.parse(Buffer.from(fData.content, 'base64').toString());
 
       const post = {
         id: Date.now(),
@@ -143,6 +168,8 @@ module.exports = async function(req, res) {
       userData.yazilar.unshift(post);
       
       const newContent = Buffer.from(JSON.stringify(userData, null, 2)).toString('base64');
+      const f = await ghAPI(`uyeler/${payload.username}/bilgi.json`);
+      const fData = await f.json();
       const updateRes = await ghAPI(`uyeler/${payload.username}/bilgi.json`, 'PUT', {
         message: `Yeni yazı: ${title}`,
         content: newContent,
@@ -172,13 +199,12 @@ module.exports = async function(req, res) {
     const postId = parseInt(path.replace('/delete/', ''));
     
     try {
-      const f = await ghAPI(`uyeler/${payload.username}/bilgi.json`);
-      const fData = await f.json();
-      const userData = JSON.parse(Buffer.from(fData.content, 'base64').toString());
-      
+      const userData = await getFileContent(`uyeler/${payload.username}/bilgi.json`);
       userData.yazilar = (userData.yazilar || []).filter(p => p.id !== postId);
       
       const newContent = Buffer.from(JSON.stringify(userData, null, 2)).toString('base64');
+      const f = await ghAPI(`uyeler/${payload.username}/bilgi.json`);
+      const fData = await f.json();
       await ghAPI(`uyeler/${payload.username}/bilgi.json`, 'PUT', {
         message: 'Yazı silindi',
         content: newContent,
@@ -203,38 +229,32 @@ module.exports = async function(req, res) {
     const { postId, author, reason, description } = req.body || {};
     
     try {
-      // Raporları kaydet
       let reports = [];
+      const checkData = await getFileContent('reports/bildirimler.json');
+      if (checkData) {
+        reports = checkData;
+      }
+
+      reports.push({
+        id: Date.now(),
+        postId, author, reason,
+        description: description || '',
+        reporter: payload.username,
+        date: new Date().toLocaleDateString('tr-TR'),
+        status: 'pending'
+      });
+
+      const newContent = Buffer.from(JSON.stringify(reports, null, 2)).toString('base64');
+      
       const check = await ghAPI('reports/bildirimler.json');
       if (check.ok) {
         const fData = await check.json();
-        reports = JSON.parse(Buffer.from(fData.content, 'base64').toString());
-        const newContent = Buffer.from(JSON.stringify([...reports, {
-          id: Date.now(),
-          postId,
-          author,
-          reason,
-          description: description || '',
-          reporter: payload.username,
-          date: new Date().toLocaleDateString('tr-TR'),
-          status: 'pending'
-        }], null, 2)).toString('base64');
         await ghAPI('reports/bildirimler.json', 'PUT', {
           message: 'Yeni şikayet',
           content: newContent,
           sha: fData.sha
         });
       } else {
-        const newContent = Buffer.from(JSON.stringify([{
-          id: Date.now(),
-          postId,
-          author,
-          reason,
-          description: description || '',
-          reporter: payload.username,
-          date: new Date().toLocaleDateString('tr-TR'),
-          status: 'pending'
-        }], null, 2)).toString('base64');
         await ghAPI('reports/bildirimler.json', 'PUT', {
           message: 'İlk şikayet',
           content: newContent
