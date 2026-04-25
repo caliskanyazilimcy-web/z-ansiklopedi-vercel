@@ -10,18 +10,6 @@ function createToken(user) {
   return Buffer.from(payload).toString('base64') + '.' + hash;
 }
 
-function verifyToken(token) {
-  try {
-    const parts = token.split('.');
-    if (parts.length < 2) return null;
-    const payload = JSON.parse(Buffer.from(parts[0], 'base64').toString());
-    if (payload.exp < Date.now()) return null;
-    const hash = crypto.createHmac('sha256', JWT_SECRET).update(JSON.stringify(payload)).digest('hex');
-    if (hash !== parts[1]) return null;
-    return payload;
-  } catch(e) { return null; }
-}
-
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password + 'z-tuz-2024').digest('hex');
 }
@@ -44,15 +32,26 @@ async function getUserData(username) {
 }
 
 async function saveUserData(userData) {
+  // Önce kullanıcı var mı kontrol et
   const check = await ghAPI(`uyeler/${userData.username}/bilgi.json`);
-  if (!check.ok) {
-    // Yeni kullanıcı
-    const content = Buffer.from(JSON.stringify(userData)).toString('base64');
-    return ghAPI(`uyeler/${userData.username}/bilgi.json`, 'PUT', { message: 'Yeni kayıt', content });
+  
+  const content = Buffer.from(JSON.stringify(userData, null, 2)).toString('base64');
+  
+  if (check.ok) {
+    // Kullanıcı var, güncelle
+    const fileData = await check.json();
+    return ghAPI(`uyeler/${userData.username}/bilgi.json`, 'PUT', {
+      message: 'Profil güncellendi',
+      content: content,
+      sha: fileData.sha
+    });
+  } else {
+    // Yeni kullanıcı oluştur
+    return ghAPI(`uyeler/${userData.username}/bilgi.json`, 'PUT', {
+      message: 'Yeni kullanıcı kaydı',
+      content: content
+    });
   }
-  const fileData = await check.json();
-  const content = Buffer.from(JSON.stringify(userData)).toString('base64');
-  return ghAPI(`uyeler/${userData.username}/bilgi.json`, 'PUT', { message: 'Güncelleme', content, sha: fileData.sha });
 }
 
 module.exports = async function(req, res) {
@@ -62,58 +61,93 @@ module.exports = async function(req, res) {
   // LOGIN
   if ((path === '/login' || path === '/login/') && req.method === 'POST') {
     const { username, password } = req.body || {};
+    
     if (!username || !password) {
       res.end(JSON.stringify({ success: false, message: 'Tüm alanları doldurun' }));
       return;
     }
-    const userData = await getUserData(username);
-    if (!userData) {
-      res.end(JSON.stringify({ success: false, message: 'Kullanıcı bulunamadı' }));
-      return;
+
+    try {
+      const userData = await getUserData(username);
+      
+      if (!userData) {
+        res.end(JSON.stringify({ success: false, message: 'Kullanıcı bulunamadı' }));
+        return;
+      }
+
+      const hashedInput = hashPassword(password);
+      
+      if (userData.password !== hashedInput) {
+        res.end(JSON.stringify({ success: false, message: 'Şifre hatalı' }));
+        return;
+      }
+
+      const ADMINS = (process.env.ADMINS || 'admin,caliskanyazilimcy-web').split(',');
+      userData.isAdmin = ADMINS.includes(username);
+      
+      const token = createToken(userData);
+      
+      res.end(JSON.stringify({
+        success: true,
+        token,
+        user: { username: userData.username, isAdmin: userData.isAdmin, profile: userData.profile || {} }
+      }));
+    } catch(e) {
+      res.end(JSON.stringify({ success: false, message: 'Giriş hatası: ' + e.message }));
     }
-    if (userData.password !== hashPassword(password)) {
-      res.end(JSON.stringify({ success: false, message: 'Şifre hatalı' }));
-      return;
-    }
-    const ADMINS = (process.env.ADMINS || 'admin,caliskanyazilimcy-web').split(',');
-    userData.isAdmin = ADMINS.includes(username);
-    const token = createToken(userData);
-    res.end(JSON.stringify({
-      success: true,
-      token,
-      user: { username: userData.username, isAdmin: userData.isAdmin, profile: userData.profile || {} }
-    }));
     return;
   }
 
   // REGISTER
   if ((path === '/register' || path === '/register/') && req.method === 'POST') {
     const { username, password } = req.body || {};
+    
     if (!username || !password) {
       res.end(JSON.stringify({ success: false, message: 'Tüm alanları doldurun' }));
       return;
     }
+    
     if (username.length < 3) {
-      res.end(JSON.stringify({ success: false, message: 'Kullanıcı adı en az 3 karakter' }));
+      res.end(JSON.stringify({ success: false, message: 'Kullanıcı adı en az 3 karakter olmalı' }));
       return;
     }
-    const existing = await getUserData(username);
-    if (existing) {
-      res.end(JSON.stringify({ success: false, message: 'Bu kullanıcı adı alınmış' }));
+
+    if (password.length < 3) {
+      res.end(JSON.stringify({ success: false, message: 'Şifre en az 3 karakter olmalı' }));
       return;
     }
-    const ADMINS = (process.env.ADMINS || 'admin,caliskanyazilimcy-web').split(',');
-    const userData = {
-      username,
-      password: hashPassword(password),
-      yazilar: [],
-      profile: { avatar: '', youtube: '', facebook: '', whatsapp: '' },
-      verified: false,
-      bannedUntil: null,
-      isAdmin: ADMINS.includes(username)
-    };
-    await saveUserData(userData);
-    res.end(JSON.stringify({ success: true, message: 'Kayıt başarılı' }));
+
+    try {
+      // Önce kullanıcı var mı kontrol et
+      const existing = await getUserData(username);
+      if (existing) {
+        res.end(JSON.stringify({ success: false, message: 'Bu kullanıcı adı zaten alınmış!' }));
+        return;
+      }
+
+      const ADMINS = (process.env.ADMINS || 'admin,caliskanyazilimcy-web').split(',');
+      
+      const userData = {
+        username: username,
+        password: hashPassword(password),
+        yazilar: [],
+        profile: { avatar: '', youtube: '', facebook: '', whatsapp: '' },
+        verified: false,
+        bannedUntil: null,
+        isAdmin: ADMINS.includes(username)
+      };
+
+      const saveResult = await saveUserData(userData);
+      
+      if (saveResult.ok) {
+        res.end(JSON.stringify({ success: true, message: 'Kayıt başarılı! Giriş yapabilirsiniz.' }));
+      } else {
+        const err = await saveResult.json();
+        res.end(JSON.stringify({ success: false, message: 'Kayıt başarısız: ' + (err.message || 'Bilinmeyen hata') }));
+      }
+    } catch(e) {
+      res.end(JSON.stringify({ success: false, message: 'Kayıt hatası: ' + e.message }));
+    }
     return;
   }
 
@@ -121,9 +155,26 @@ module.exports = async function(req, res) {
   if ((path === '/me' || path === '/me/') && req.method === 'GET') {
     const auth = req.headers.authorization;
     if (!auth) { res.end(JSON.stringify({ success: false })); return; }
-    const payload = verifyToken(auth.replace('Bearer ', ''));
-    if (!payload) { res.end(JSON.stringify({ success: false })); return; }
-    res.end(JSON.stringify({ success: true, user: payload }));
+    
+    const token = auth.replace('Bearer ', '');
+    try {
+      const parts = token.split('.');
+      if (parts.length < 2) { res.end(JSON.stringify({ success: false })); return; }
+      
+      const payload = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+      
+      if (payload.exp < Date.now()) {
+        res.end(JSON.stringify({ success: false, message: 'Oturum süresi doldu' }));
+        return;
+      }
+      
+      const hash = crypto.createHmac('sha256', JWT_SECRET).update(JSON.stringify(payload)).digest('hex');
+      if (hash !== parts[1]) { res.end(JSON.stringify({ success: false })); return; }
+      
+      res.end(JSON.stringify({ success: true, user: payload }));
+    } catch(e) {
+      res.end(JSON.stringify({ success: false }));
+    }
     return;
   }
 
