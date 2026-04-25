@@ -24,21 +24,40 @@ async function ghAPI(path, method = 'GET', body = null) {
   return res;
 }
 
+// Büyük dosyaları okumak için özel fonksiyon
+async function getFileContent(filePath) {
+  const response = await ghAPI(filePath);
+  if (!response.ok) return null;
+
+  const fileData = await response.json();
+
+  // Dosya 1MB'den büyükse git_url ile al
+  if (fileData.size > 1000000 && fileData.git_url) {
+    const gitResponse = await fetch(fileData.git_url, {
+      headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!gitResponse.ok) return null;
+    const gitData = await gitResponse.json();
+    return JSON.parse(Buffer.from(gitData.content, 'base64').toString());
+  }
+
+  // Küçük dosyalar için doğrudan content
+  if (fileData.content) {
+    return JSON.parse(Buffer.from(fileData.content, 'base64').toString());
+  }
+
+  return null;
+}
+
 async function getUserData(username) {
-  const res = await ghAPI(`uyeler/${username}/bilgi.json`);
-  if (!res.ok) return null;
-  const file = await res.json();
-  return JSON.parse(Buffer.from(file.content, 'base64').toString());
+  return await getFileContent(`uyeler/${username}/bilgi.json`);
 }
 
 async function saveUserData(userData) {
-  // Önce kullanıcı var mı kontrol et
   const check = await ghAPI(`uyeler/${userData.username}/bilgi.json`);
-  
   const content = Buffer.from(JSON.stringify(userData, null, 2)).toString('base64');
-  
+
   if (check.ok) {
-    // Kullanıcı var, güncelle
     const fileData = await check.json();
     return ghAPI(`uyeler/${userData.username}/bilgi.json`, 'PUT', {
       message: 'Profil güncellendi',
@@ -46,7 +65,6 @@ async function saveUserData(userData) {
       sha: fileData.sha
     });
   } else {
-    // Yeni kullanıcı oluştur
     return ghAPI(`uyeler/${userData.username}/bilgi.json`, 'PUT', {
       message: 'Yeni kullanıcı kaydı',
       content: content
@@ -79,6 +97,12 @@ module.exports = async function(req, res) {
       
       if (userData.password !== hashedInput) {
         res.end(JSON.stringify({ success: false, message: 'Şifre hatalı' }));
+        return;
+      }
+
+      // Ban kontrolü
+      if (userData.bannedUntil && new Date(userData.bannedUntil).getTime() > Date.now()) {
+        res.end(JSON.stringify({ success: false, message: 'Hesabınız ' + new Date(userData.bannedUntil).toLocaleDateString('tr-TR') + ' tarihine kadar engellenmiş!' }));
         return;
       }
 
@@ -118,7 +142,6 @@ module.exports = async function(req, res) {
     }
 
     try {
-      // Önce kullanıcı var mı kontrol et
       const existing = await getUserData(username);
       if (existing) {
         res.end(JSON.stringify({ success: false, message: 'Bu kullanıcı adı zaten alınmış!' }));
