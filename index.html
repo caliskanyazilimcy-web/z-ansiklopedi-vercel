@@ -4,397 +4,143 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Z-Ansiklopedi</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
-    :root {
-      --primary: #1a73e8;
-      --bg: #f8f9fa;
-      --card: #fff;
-      --text: #202124;
-      --muted: #80868b;
-      --border: #dadce0;
-      --radius: 16px;
-      --danger: #ef4444;
-      --success: #0d9488;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
-    
-    .nav { background: white; border-bottom: 1px solid var(--border); padding: 0.8rem 1.5rem; position: sticky; top: 0; z-index: 100; }
-    .nav-inner { max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    .logo { font-size: 1.3rem; font-weight: 700; color: var(--primary); cursor: pointer; }
-    .logo i { background: var(--primary); color: white; padding: 8px; border-radius: 10px; margin-right: 6px; }
-    
-    .container { max-width: 800px; margin: 1.5rem auto; padding: 0 1rem; flex: 1; width: 100%; }
-    
-    .tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; background: white; padding: 5px; border-radius: 50px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .tab { flex: 1; padding: 10px 14px; text-align: center; border-radius: 50px; cursor: pointer; font-weight: 500; font-size: 0.85rem; border: none; background: transparent; color: var(--muted); transition: 0.2s; }
-    .tab:hover { background: #f0f0f0; }
-    .tab.active { background: var(--primary); color: white; font-weight: 600; }
-    
-    .card { background: white; border-radius: var(--radius); padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid var(--border); }
-    .card.clickable { cursor: pointer; transition: 0.2s; }
-    .card.clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-left: 3px solid var(--primary); }
-    
-    .btn { padding: 10px 22px; border-radius: 50px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { opacity: 0.9; }
-    .btn-outline { background: transparent; border: 2px solid var(--border); }
-    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
-    .btn-block { width: 100%; justify-content: center; padding: 14px; font-size: 1rem; }
-    
-    input, textarea, select { width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; font-family: inherit; background: #fafafa; }
-    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); background: white; }
-    
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; padding: 16px; }
-    .modal.active { display: flex; }
-    .modal-box { background: white; border-radius: 20px; padding: 24px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
-    .modal-box h2 { margin-bottom: 16px; }
-    
-    .toast { position: fixed; bottom: 20px; right: 20px; padding: 14px 22px; border-radius: 50px; color: white; font-weight: 500; z-index: 9999; animation: up 0.3s; }
-    .toast.success { background: var(--success); }
-    .toast.error { background: var(--danger); }
-    @keyframes up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    
-    .loading { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 9998; align-items: center; justify-content: center; flex-direction: column; }
-    .loading.active { display: flex; }
-    .spinner { width: 44px; height: 44px; border: 4px solid #ddd; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-    .stat { background: white; border-radius: var(--radius); padding: 18px; text-align: center; border: 1px solid var(--border); }
-    .stat h2 { font-size: 2rem; }
-    .stat p { color: var(--muted); font-size: 0.85rem; }
-    
-    .empty { text-align: center; padding: 50px; color: var(--muted); }
-    .empty i { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.4; }
-    
-    @media (max-width: 600px) {
-      .tab { padding: 8px 10px; font-size: 0.75rem; }
-      .stats { grid-template-columns: 1fr 1fr; }
-    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    .card { background: white; padding: 20px; border-radius: 12px; max-width: 600px; margin: 20px auto; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    h1 { color: #1a73e8; }
+    .btn { padding: 10px 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 5px; }
+    .btn:hover { background: #1557b0; }
+    input { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 8px; width: 200px; }
+    #posts { margin-top: 15px; }
+    .post { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+    .post:hover { background: #f0f0f0; }
   </style>
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-inner">
-    <div class="logo" onclick="location.reload()"><i class="fas fa-book-open"></i> Z-Ansiklopedi</div>
-    <div id="auth-area"></div>
+<div class="card">
+  <h1>📚 Z-Ansiklopedi Test</h1>
+  
+  <div id="login-area">
+    <input type="text" id="username" placeholder="Kullanıcı adı">
+    <input type="password" id="password" placeholder="Şifre">
+    <button class="btn" onclick="login()">Giriş</button>
+    <button class="btn" onclick="register()">Kayıt</button>
   </div>
-</nav>
-
-<div class="container">
-  <div class="tabs" id="tabs">
-    <button class="tab active" data-tab="home">🏠 Ana Sayfa</button>
-    <button class="tab" data-tab="feed">📰 Yazılar</button>
-    <button class="tab" data-tab="write">✍️ Yaz</button>
+  
+  <div id="user-area" style="display:none;">
+    <p>Hoş geldin, <strong id="user-name"></strong>!</p>
+    <button class="btn" onclick="logout()">Çıkış</button>
   </div>
-
-  <div id="view-home"></div>
-  <div id="view-feed" style="display:none;"></div>
-  <div id="view-write" style="display:none;"></div>
+  
+  <hr style="margin:15px 0;">
+  
+  <div id="write-area" style="display:none;">
+    <h3>Yeni Yazı</h3>
+    <input type="text" id="post-title" placeholder="Başlık" style="width:100%;">
+    <textarea id="post-content" placeholder="İçerik..." style="width:100%; height:100px; margin:5px 0; padding:10px; border:1px solid #ddd; border-radius:8px;"></textarea>
+    <button class="btn" onclick="publish()">Yayınla</button>
+  </div>
+  
+  <h3 style="margin-top:15px;">Son Yazılar</h3>
+  <button class="btn" onclick="loadPosts()">Yenile</button>
+  <div id="posts">Yükleniyor...</div>
 </div>
 
-<div id="loading" class="loading"><div class="spinner"></div><p style="margin-top:12px;font-weight:500;">Yükleniyor...</p></div>
-<div id="toast-box"></div>
-
 <script>
-// ==================== API ====================
+let token = localStorage.getItem('token') || '';
+let user = JSON.parse(localStorage.getItem('user') || 'null');
+
 async function api(path, method = 'GET', body = null) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
-  const token = localStorage.getItem('token');
   if (token) opts.headers['Authorization'] = 'Bearer ' + token;
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch('/api' + path, opts);
   return res.json();
 }
 
-// ==================== STATE ====================
-let user = JSON.parse(localStorage.getItem('user') || 'null');
-let posts = [];
-
-// ==================== HELPERS ====================
-function toast(msg, type) {
-  const t = document.createElement('div'); t.className = 'toast ' + type; t.textContent = msg;
-  document.getElementById('toast-box').appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 2500);
-}
-function showLoading() { document.getElementById('loading').classList.add('active'); }
-function hideLoading() { document.getElementById('loading').classList.remove('active'); }
-function showModal(id) { document.getElementById(id).classList.add('active'); }
-function hideModal(id) { document.getElementById(id).classList.remove('active'); }
-
-// ==================== AUTH UI ====================
-function updateAuthUI() {
-  const area = document.getElementById('auth-area');
-  if (user) {
-    area.innerHTML = `<span style="font-weight:600;margin-right:10px;">👤 ${user.username}</span>
-      <button class="btn btn-outline btn-sm" onclick="logout()">Çıkış</button>`;
+async function login() {
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  if (!u || !p) return alert('Doldur!');
+  
+  const r = await api('/auth/login', 'POST', { username: u, password: p });
+  if (r.success) {
+    token = r.token;
+    user = r.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    updateUI();
+    loadPosts();
+    alert('Giriş başarılı!');
   } else {
-    area.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showModal('auth-modal')">Giriş Yap</button>`;
+    alert(r.message || 'Hata!');
   }
+}
+
+async function register() {
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  if (!u || !p) return alert('Doldur!');
+  
+  const r = await api('/auth/register', 'POST', { username: u, password: p });
+  alert(r.success ? 'Kayıt başarılı! Giriş yapın.' : (r.message || 'Hata!'));
 }
 
 function logout() {
-  localStorage.clear();
+  token = '';
   user = null;
-  updateAuthUI();
-  loadHome();
-  toast('Çıkış yapıldı', 'success');
+  localStorage.clear();
+  updateUI();
+  loadPosts();
 }
 
-// ==================== AUTH HANDLER ====================
-let authMode = 'login';
-function setAuthMode(mode) {
-  authMode = mode;
-  document.getElementById('auth-title').textContent = mode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
-  document.getElementById('auth-submit').textContent = mode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
-  document.getElementById('auth-toggle').innerHTML = mode === 'login' 
-    ? 'Hesabın yok mu? <b>Kayıt Ol</b>' 
-    : 'Hesabın var mı? <b>Giriş Yap</b>';
-  document.getElementById('auth-username').value = '';
-  document.getElementById('auth-password').value = '';
-}
-
-async function handleAuth() {
-  const username = document.getElementById('auth-username').value.trim();
-  const password = document.getElementById('auth-password').value;
-  if (!username || !password) return toast('Tüm alanları doldurun!', 'error');
-  
-  showLoading();
-  const ep = authMode === 'login' ? '/auth/login' : '/auth/register';
-  const result = await api(ep, 'POST', { username, password });
-  hideLoading();
-  
-  if (result.success) {
-    if (authMode === 'login') {
-      localStorage.setItem('token', result.token);
-      user = result.user;
-      localStorage.setItem('user', JSON.stringify(user));
-      hideModal('auth-modal');
-      updateAuthUI();
-      loadHome();
-      toast(`Hoş geldin, ${username}! 🎉`, 'success');
-    } else {
-      toast('Kayıt başarılı! Giriş yapın.', 'success');
-      setAuthMode('login');
-    }
-  } else {
-    toast(result.message || 'Hata!', 'error');
-  }
-}
-
-// ==================== TABS ====================
-function switchTab(tab) {
-  ['home','feed','write'].forEach(t => document.getElementById('view-' + t).style.display = 'none');
-  document.getElementById('view-' + tab).style.display = 'block';
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-  
-  if (tab === 'home') loadHome();
-  if (tab === 'feed') loadFeed();
-  if (tab === 'write') loadWrite();
-}
-
-// ==================== HOME ====================
-async function loadHome() {
-  showLoading();
-  const result = await api('/posts/list');
-  hideLoading();
-  
-  if (result.success) {
-    posts = result.posts || [];
-    const view = document.getElementById('view-home');
-    
-    view.innerHTML = `
-      <div class="stats">
-        <div class="stat"><h2>${result.totalUsers || 0}</h2><p>Yazar</p></div>
-        <div class="stat"><h2>${result.totalPosts || 0}</h2><p>Yazı</p></div>
-      </div>
-      <h3 style="margin-bottom:12px;">📌 Son Yazılar</h3>
-      ${posts.length === 0 
-        ? '<div class="empty"><i>📭</i><p>Henüz yazı yok. İlk yazıyı sen yaz!</p></div>'
-        : posts.slice(0, 10).map(p => `
-          <div class="card clickable" onclick="viewPost(${p.id})">
-            <strong>${p.title}</strong>
-            <p style="color:var(--muted);font-size:0.85rem;">${p.author} • ${p.date} • ${p.reads || 0} okunma</p>
-          </div>`).join('')
-      }
-    `;
-  }
-}
-
-// ==================== FEED ====================
-async function loadFeed() {
-  showLoading();
-  const result = await api('/posts/list');
-  hideLoading();
-  
-  if (result.success) {
-    posts = result.posts || [];
-    const view = document.getElementById('view-feed');
-    view.innerHTML = `
-      <input type="text" placeholder="🔍 Ara..." oninput="searchPosts(this.value)" style="margin-bottom:16px;">
-      <div id="feed-list">
-        ${posts.length === 0 
-          ? '<div class="empty"><i>📭</i><p>Henüz yazı yok.</p></div>'
-          : posts.map(p => `
-            <div class="card clickable" onclick="viewPost(${p.id})">
-              <strong>${p.title}</strong>
-              <p style="color:var(--muted);font-size:0.85rem;">${p.author} • ${p.date} • ${p.reads || 0} okunma</p>
-            </div>`).join('')
-        }
-      </div>`;
-  }
-}
-
-function searchPosts(term) {
-  const t = term.toLowerCase();
-  const filtered = t ? posts.filter(p => p.title.toLowerCase().includes(t) || p.author.toLowerCase().includes(t)) : posts;
-  document.getElementById('feed-list').innerHTML = filtered.map(p => `
-    <div class="card clickable" onclick="viewPost(${p.id})">
-      <strong>${p.title}</strong>
-      <p style="color:var(--muted);font-size:0.85rem;">${p.author} • ${p.date}</p>
-    </div>`).join('') || '<div class="empty"><p>Sonuç bulunamadı.</p></div>';
-}
-
-// ==================== VIEW POST ====================
-async function viewPost(id) {
-  showLoading();
-  const result = await api('/posts/get/' + id);
-  hideLoading();
-  
-  if (result.success) {
-    const p = result.post;
-    const view = document.getElementById('view-home');
-    document.getElementById('view-home').style.display = 'block';
-    document.getElementById('view-feed').style.display = 'none';
-    document.getElementById('view-write').style.display = 'none';
-    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-    
-    view.innerHTML = `
-      <button class="btn btn-outline btn-sm" onclick="loadHome();switchTab('home')" style="margin-bottom:16px;">← Geri</button>
-      <div class="card">
-        <h1 style="font-size:1.6rem;margin-bottom:8px;">${p.title}</h1>
-        <p style="color:var(--muted);margin-bottom:16px;">${p.author} • ${p.date} • ${p.reads || 0} okunma</p>
-        <hr style="margin:16px 0;border-color:var(--border);">
-        <div style="line-height:1.8;">${p.content}</div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:8px;">
-        <button class="btn btn-outline btn-sm" onclick="copyLink(${p.id})">🔗 Kopyala</button>
-        ${user && user.username === p.author ? `<button class="btn btn-danger btn-sm" onclick="deletePost(${p.id})">🗑️ Sil</button>` : ''}
-      </div>`;
-  }
-}
-
-function copyLink(id) {
-  const url = window.location.origin + '/#post-' + id;
-  navigator.clipboard.writeText(url).then(() => toast('Link kopyalandı!', 'success'));
-}
-
-async function deletePost(id) {
-  if (!confirm('Silmek istediğinize emin misiniz?')) return;
-  showLoading();
-  const result = await api('/posts/delete/' + id, 'DELETE');
-  hideLoading();
-  if (result.success) {
-    toast('Silindi!', 'success');
-    loadHome();
-  } else {
-    toast('Hata!', 'error');
-  }
-}
-
-// ==================== WRITE ====================
-function loadWrite() {
-  if (!user) {
-    document.getElementById('view-write').innerHTML = `
-      <div class="card" style="text-align:center;">
-        <i style="font-size:3rem;display:block;margin-bottom:12px;">🔒</i>
-        <h3>Giriş Yapmanız Gerekiyor</h3>
-        <p style="color:var(--muted);margin:10px 0;">Yazı yazmak için giriş yapın.</p>
-        <button class="btn btn-primary" onclick="showModal('auth-modal');setAuthMode('login');">Giriş Yap</button>
-      </div>`;
-    return;
-  }
-  
-  document.getElementById('view-write').innerHTML = `
-    <div class="card">
-      <h3>✍️ Yeni Yazı</h3>
-      <input type="text" id="post-title" placeholder="Başlık..." style="margin:12px 0;font-weight:600;">
-      <textarea id="post-content" placeholder="İçerik yazın..." style="min-height:200px;margin-bottom:12px;"></textarea>
-      <button class="btn btn-primary btn-block" id="publish-btn" onclick="publishPost()">📨 Yayınla</button>
-    </div>`;
-}
-
-async function publishPost() {
-  if (!user) return toast('Giriş yapın!', 'error');
+async function publish() {
   const title = document.getElementById('post-title').value.trim();
   const content = document.getElementById('post-content').value.trim();
-  if (!title) return toast('Başlık girin!', 'error');
-  if (!content) return toast('İçerik girin!', 'error');
+  if (!title || !content) return alert('Başlık ve içerik girin!');
   
-  const btn = document.getElementById('publish-btn');
-  btn.disabled = true; btn.textContent = 'Yayınlanıyor...';
-  
-  const result = await api('/posts/create', 'POST', { title, content });
-  
-  if (result.success) {
-    toast('Yayınlandı! 🎉', 'success');
+  const r = await api('/posts/create', 'POST', { title, content });
+  if (r.success) {
+    alert('Yayınlandı!');
     document.getElementById('post-title').value = '';
     document.getElementById('post-content').value = '';
-    loadHome();
+    loadPosts();
   } else {
-    toast(result.message || 'Hata!', 'error');
+    alert(r.message || 'Hata!');
   }
-  btn.disabled = false; btn.textContent = '📨 Yayınla';
 }
 
-// ==================== INIT ====================
-document.addEventListener('click', function(e) {
-  if (e.target.classList.contains('modal')) e.target.classList.remove('active');
-  const tab = e.target.closest('.tab');
-  if (tab) switchTab(tab.dataset.tab);
-});
-
-window.onload = async function() {
-  updateAuthUI();
-  
-  // Session kontrol
-  const token = localStorage.getItem('token');
-  if (token && !user) {
-    const result = await api('/auth/me');
-    if (result.success) {
-      user = result.user;
-      localStorage.setItem('user', JSON.stringify(user));
-      updateAuthUI();
+async function loadPosts() {
+  const r = await api('/posts/list');
+  const div = document.getElementById('posts');
+  if (r.success && r.posts) {
+    if (r.posts.length === 0) {
+      div.innerHTML = '<p>Henüz yazı yok.</p>';
     } else {
-      localStorage.clear();
+      div.innerHTML = r.posts.map(p => `<div class="post"><strong>${p.title}</strong> - ${p.author} (${p.date})</div>`).join('');
     }
+  } else {
+    div.innerHTML = '<p>Yüklenemedi.</p>';
   }
-  
-  loadHome();
-};
+}
+
+function updateUI() {
+  if (user) {
+    document.getElementById('login-area').style.display = 'none';
+    document.getElementById('user-area').style.display = 'block';
+    document.getElementById('write-area').style.display = 'block';
+    document.getElementById('user-name').textContent = user.username;
+  } else {
+    document.getElementById('login-area').style.display = 'block';
+    document.getElementById('user-area').style.display = 'none';
+    document.getElementById('write-area').style.display = 'none';
+  }
+}
+
+updateUI();
+loadPosts();
 </script>
-
-<!-- AUTH MODAL -->
-<div id="auth-modal" class="modal">
-  <div class="modal-box">
-    <h2 id="auth-title">Giriş Yap</h2>
-    <input type="text" id="auth-username" placeholder="Kullanıcı adı" style="margin-bottom:8px;">
-    <input type="password" id="auth-password" placeholder="Şifre" style="margin-bottom:12px;">
-    <button class="btn btn-primary btn-block" id="auth-submit" onclick="handleAuth()">Giriş Yap</button>
-    <p style="text-align:center;margin-top:14px;cursor:pointer;color:var(--primary);" id="auth-toggle" onclick="setAuthMode(authMode==='login'?'register':'login')">
-      Hesabın yok mu? <b>Kayıt Ol</b>
-    </p>
-  </div>
-</div>
-
-<div id="toast-box"></div>
-<div id="loading" class="loading"><div class="spinner"></div><p style="margin-top:12px;">Yükleniyor...</p></div>
 
 </body>
 </html>
