@@ -1,205 +1,145 @@
 const crypto = require('crypto');
+
+// Token sadece Vercel'den gelecek!
+const TOKEN = process.env.GITHUB_TOKEN || '';
 const JWT_SECRET = process.env.JWT_SECRET || 'z-ansiklopedi-gizli-anahtar-2024';
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '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';
-const GITHUB_OWNER = process.env.GITHUB_OWNER || 'caliskanyazilimcy-web';
-const GITHUB_REPO = process.env.GITHUB_REPO || 'A-Z-ansiklopedi-';
 
 function createToken(user) {
-  const payload = JSON.stringify({ username: user.username, isAdmin: user.isAdmin, exp: Date.now() + 86400000 });
-  const hash = crypto.createHmac('sha256', JWT_SECRET).update(payload).digest('hex');
-  return Buffer.from(payload).toString('base64') + '.' + hash;
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64');
+  const payload = Buffer.from(JSON.stringify({
+    username: user.username,
+    isAdmin: user.isAdmin,
+    exp: Math.floor(Date.now() / 1000) + 86400
+  })).toString('base64');
+  const signature = crypto.createHmac('sha256', JWT_SECRET)
+    .update(header + '.' + payload)
+    .digest('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return header + '.' + payload + '.' + signature;
+}
+
+function verifyToken(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload;
+  } catch(e) { return null; }
 }
 
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password + 'z-tuz-2024').digest('hex');
 }
 
-async function ghAPI(path, method = 'GET', body = null) {
-  const options = {
-    method,
-    headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
-  };
-  if (body) options.body = JSON.stringify(body);
-  const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`, options);
-  return res;
-}
-
-// Büyük dosyaları okumak için özel fonksiyon
-async function getFileContent(filePath) {
-  const response = await ghAPI(filePath);
-  if (!response.ok) return null;
-
-  const fileData = await response.json();
-
-  // Dosya 1MB'den büyükse git_url ile al
-  if (fileData.size > 1000000 && fileData.git_url) {
-    const gitResponse = await fetch(fileData.git_url, {
-      headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (!gitResponse.ok) return null;
-    const gitData = await gitResponse.json();
-    return JSON.parse(Buffer.from(gitData.content, 'base64').toString());
-  }
-
-  // Küçük dosyalar için doğrudan content
-  if (fileData.content) {
-    return JSON.parse(Buffer.from(fileData.content, 'base64').toString());
-  }
-
-  return null;
-}
-
-async function getUserData(username) {
-  return await getFileContent(`uyeler/${username}/bilgi.json`);
-}
-
-async function saveUserData(userData) {
-  const check = await ghAPI(`uyeler/${userData.username}/bilgi.json`);
-  const content = Buffer.from(JSON.stringify(userData, null, 2)).toString('base64');
-
-  if (check.ok) {
-    const fileData = await check.json();
-    return ghAPI(`uyeler/${userData.username}/bilgi.json`, 'PUT', {
-      message: 'Profil güncellendi',
-      content: content,
-      sha: fileData.sha
-    });
-  } else {
-    return ghAPI(`uyeler/${userData.username}/bilgi.json`, 'PUT', {
-      message: 'Yeni kullanıcı kaydı',
-      content: content
-    });
-  }
-}
-
 module.exports = async function(req, res) {
-  const path = req.url.replace('/api/auth', '');
   res.setHeader('Content-Type', 'application/json');
-
-  // LOGIN
-  if ((path === '/login' || path === '/login/') && req.method === 'POST') {
-    const { username, password } = req.body || {};
-    
-    if (!username || !password) {
-      res.end(JSON.stringify({ success: false, message: 'Tüm alanları doldurun' }));
-      return;
-    }
-
+  const url = req.url.replace('/api/auth', '');
+  
+  // Body parse
+  let body = {};
+  if (req.method === 'POST') {
     try {
-      const userData = await getUserData(username);
-      
-      if (!userData) {
-        res.end(JSON.stringify({ success: false, message: 'Kullanıcı bulunamadı' }));
-        return;
-      }
-
-      const hashedInput = hashPassword(password);
-      
-      if (userData.password !== hashedInput) {
-        res.end(JSON.stringify({ success: false, message: 'Şifre hatalı' }));
-        return;
-      }
-
-      // Ban kontrolü
-      if (userData.bannedUntil && new Date(userData.bannedUntil).getTime() > Date.now()) {
-        res.end(JSON.stringify({ success: false, message: 'Hesabınız ' + new Date(userData.bannedUntil).toLocaleDateString('tr-TR') + ' tarihine kadar engellenmiş!' }));
-        return;
-      }
-
-      const ADMINS = (process.env.ADMINS || 'admin,caliskanyazilimcy-web').split(',');
-      userData.isAdmin = ADMINS.includes(username);
-      
-      const token = createToken(userData);
-      
-      res.end(JSON.stringify({
-        success: true,
-        token,
-        user: { username: userData.username, isAdmin: userData.isAdmin, profile: userData.profile || {} }
-      }));
-    } catch(e) {
-      res.end(JSON.stringify({ success: false, message: 'Giriş hatası: ' + e.message }));
-    }
-    return;
+      body = req.body || {};
+    } catch(e) { body = {}; }
   }
 
   // REGISTER
-  if ((path === '/register' || path === '/register/') && req.method === 'POST') {
-    const { username, password } = req.body || {};
+  if ((url === '/register' || url === '/register/') && req.method === 'POST') {
+    const { username, password } = body;
     
     if (!username || !password) {
-      res.end(JSON.stringify({ success: false, message: 'Tüm alanları doldurun' }));
-      return;
+      return res.end(JSON.stringify({ success: false, message: 'Tüm alanları doldurun' }));
     }
     
-    if (username.length < 3) {
-      res.end(JSON.stringify({ success: false, message: 'Kullanıcı adı en az 3 karakter olmalı' }));
-      return;
-    }
-
-    if (password.length < 3) {
-      res.end(JSON.stringify({ success: false, message: 'Şifre en az 3 karakter olmalı' }));
-      return;
+    if (!TOKEN) {
+      return res.end(JSON.stringify({ success: false, message: 'Sunucu hatası: Token bulunamadı' }));
     }
 
     try {
-      const existing = await getUserData(username);
-      if (existing) {
-        res.end(JSON.stringify({ success: false, message: 'Bu kullanıcı adı zaten alınmış!' }));
-        return;
-      }
-
-      const ADMINS = (process.env.ADMINS || 'admin,caliskanyazilimcy-web').split(',');
-      
       const userData = {
-        username: username,
+        username,
         password: hashPassword(password),
         yazilar: [],
         profile: { avatar: '', youtube: '', facebook: '', whatsapp: '' },
         verified: false,
-        bannedUntil: null,
-        isAdmin: ADMINS.includes(username)
+        bannedUntil: null
       };
 
-      const saveResult = await saveUserData(userData);
+      const content = Buffer.from(JSON.stringify(userData, null, 2)).toString('base64');
       
-      if (saveResult.ok) {
-        res.end(JSON.stringify({ success: true, message: 'Kayıt başarılı! Giriş yapabilirsiniz.' }));
+      const r = await fetch(`https://api.github.com/repos/caliskanyazilimcy-web/A-Z-ansiklopedi-/contents/uyeler/${username}/bilgi.json`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'token ' + TOKEN,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: 'Yeni kayıt: ' + username, content })
+      });
+
+      if (r.ok) {
+        return res.end(JSON.stringify({ success: true, message: 'Kayıt başarılı! Giriş yapabilirsiniz.' }));
       } else {
-        const err = await saveResult.json();
-        res.end(JSON.stringify({ success: false, message: 'Kayıt başarısız: ' + (err.message || 'Bilinmeyen hata') }));
+        const err = await r.json().catch(() => ({}));
+        return res.end(JSON.stringify({ success: false, message: 'Kayıt başarısız: ' + (err.message || 'Sunucu hatası') }));
       }
     } catch(e) {
-      res.end(JSON.stringify({ success: false, message: 'Kayıt hatası: ' + e.message }));
+      return res.end(JSON.stringify({ success: false, message: 'Hata: ' + e.message }));
     }
-    return;
+  }
+
+  // LOGIN
+  if ((url === '/login' || url === '/login/') && req.method === 'POST') {
+    const { username, password } = body;
+    
+    if (!username || !password) {
+      return res.end(JSON.stringify({ success: false, message: 'Tüm alanları doldurun' }));
+    }
+
+    try {
+      const r = await fetch(`https://api.github.com/repos/caliskanyazilimcy-web/A-Z-ansiklopedi-/contents/uyeler/${username}/bilgi.json`, {
+        headers: { 'Authorization': 'token ' + TOKEN, 'Accept': 'application/vnd.github.v3+json' }
+      });
+
+      if (!r.ok) {
+        return res.end(JSON.stringify({ success: false, message: 'Kullanıcı bulunamadı' }));
+      }
+
+      const file = await r.json();
+      const user = JSON.parse(Buffer.from(file.content, 'base64').toString());
+      
+      if (user.password !== hashPassword(password)) {
+        return res.end(JSON.stringify({ success: false, message: 'Şifre hatalı' }));
+      }
+
+      if (user.bannedUntil && new Date(user.bannedUntil).getTime() > Date.now()) {
+        return res.end(JSON.stringify({ success: false, message: 'Hesabınız engellenmiş!' }));
+      }
+
+      const ADMINS = (process.env.ADMINS || 'admin,caliskanyazilimcy-web').split(',');
+      const token = createToken({ username, isAdmin: ADMINS.includes(username) });
+
+      return res.end(JSON.stringify({
+        success: true,
+        token,
+        user: { username: user.username, isAdmin: ADMINS.includes(username), profile: user.profile || {} }
+      }));
+    } catch(e) {
+      return res.end(JSON.stringify({ success: false, message: 'Hata: ' + e.message }));
+    }
   }
 
   // ME
-  if ((path === '/me' || path === '/me/') && req.method === 'GET') {
+  if ((url === '/me' || url === '/me/') && req.method === 'GET') {
     const auth = req.headers.authorization;
-    if (!auth) { res.end(JSON.stringify({ success: false })); return; }
+    if (!auth) return res.end(JSON.stringify({ success: false }));
     
-    const token = auth.replace('Bearer ', '');
-    try {
-      const parts = token.split('.');
-      if (parts.length < 2) { res.end(JSON.stringify({ success: false })); return; }
-      
-      const payload = JSON.parse(Buffer.from(parts[0], 'base64').toString());
-      
-      if (payload.exp < Date.now()) {
-        res.end(JSON.stringify({ success: false, message: 'Oturum süresi doldu' }));
-        return;
-      }
-      
-      const hash = crypto.createHmac('sha256', JWT_SECRET).update(JSON.stringify(payload)).digest('hex');
-      if (hash !== parts[1]) { res.end(JSON.stringify({ success: false })); return; }
-      
-      res.end(JSON.stringify({ success: true, user: payload }));
-    } catch(e) {
-      res.end(JSON.stringify({ success: false }));
-    }
-    return;
+    const payload = verifyToken(auth.replace('Bearer ', ''));
+    if (!payload) return res.end(JSON.stringify({ success: false }));
+    
+    return res.end(JSON.stringify({ success: true, user: payload }));
   }
 
-  res.end(JSON.stringify({ success: false, message: 'Geçersiz istek' }));
+  return res.end(JSON.stringify({ success: false, message: 'Geçersiz istek' }));
 };
