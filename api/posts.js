@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const JWT_SECRET = process.env.JWT_SECRET || 'z-ansiklopedi-gizli-anahtar-2024';
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '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';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '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';
 const GITHUB_OWNER = process.env.GITHUB_OWNER || 'caliskanyazilimcy-web';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'A-Z-ansiklopedi-';
 
