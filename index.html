@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <meta name="description" content="Z-Ansiklopedi - Özgür bilgi platformu">
+  <meta name="keywords" content="ansiklopedi, bilgi, yazı, makale">
+  <meta property="og:title" content="Z-Ansiklopedi PRO | Bilgi Platformu">
+  <meta property="og:description" content="Özgür bilgi platformu">
+  <meta name="robots" content="index, follow">
+  <title>Z-Ansiklopedi PRO</title>
+  
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --primary-dark: #1557b0;
+      --primary-light: #e8f0fe;
+      --bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --text: #202124;
+      --text-secondary: #5f6368;
+      --text-muted: #80868b;
+      --border: #dadce0;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+      --radius: 12px;
+      --radius-lg: 16px;
+      --success: #0d9488;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --admin: #6d28d9;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      background: var(--bg); color: var(--text); line-height: 1.6;
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+
+    .nav { background: white; border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; position: sticky; top: 0; z-index: 1000; }
+    .nav-inner { max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .logo { font-size: 1.3rem; font-weight: 700; color: var(--primary); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .logo i { background: var(--primary); color: white; padding: 8px; border-radius: 10px; font-size: 1rem; }
+    
+    #auth-ui { display: flex; align-items: center; gap: 10px; }
+    .profile-badge { display: flex; align-items: center; gap: 8px; background: var(--bg); padding: 6px 14px; border-radius: 50px; cursor: pointer; border: 2px solid var(--border); font-weight: 600; font-size: 0.9rem; }
+    .profile-badge:hover { background: var(--primary-light); border-color: var(--primary); }
+    .profile-badge img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: #e0e0e0; }
+    .admin-badge { background: var(--admin); color: white; padding: 2px 8px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; }
+
+    .container { max-width: 850px; margin: 1.5rem auto; padding: 0 16px; flex: 1; width: 100%; }
+
+    .tabs { display: flex; gap: 5px; margin-bottom: 1.5rem; flex-wrap: wrap; background: white; padding: 5px; border-radius: 50px; box-shadow: var(--shadow); }
+    .tab { flex: 1 1 auto; padding: 10px 14px; text-align: center; background: transparent; border-radius: 50px; cursor: pointer; font-weight: 500; transition: 0.2s; border: none; font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; }
+    .tab i { margin-right: 5px; font-size: 0.8rem; }
+    .tab:hover { background: #f0f0f0; }
+    .tab.active { background: var(--primary); color: white; font-weight: 600; }
+    .tab.admin-tab.active { background: var(--admin); }
+
+    .card { background: white; border-radius: var(--radius-lg); padding: 22px; margin-bottom: 14px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .card.post-card { cursor: pointer; border-left: 3px solid transparent; transition: 0.2s; }
+    .card.post-card:hover { transform: translateY(-2px); border-left-color: var(--primary); box-shadow: var(--shadow-lg); }
+
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: white; border-radius: var(--radius-lg); padding: 18px; text-align: center; border: 1px solid var(--border); }
+    .stat-icon { width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 8px; }
+    .stat-number { font-size: 1.6rem; font-weight: 700; }
+    .stat-label { font-size: 0.8rem; color: var(--text-muted); }
+
+    .btn { padding: 10px 20px; border-radius: 50px; border: none; cursor: pointer; font-weight: 500; transition: 0.2s; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:disabled { opacity: 0.6; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-warning { background: var(--warning); color: #333; }
+    .btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text); }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+    .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+    .btn-block { width: 100%; justify-content: center; padding: 14px; font-size: 1rem; }
+
+    #editor-container { min-height: 350px; margin-bottom: 12px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); background: white; border: 2px solid var(--border); border-top: none; }
+    .ql-toolbar { border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important; background: #fafafa; border: 2px solid var(--border) !important; }
+    .ql-editor { min-height: 350px; padding: 16px; }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 16px; }
+    .modal-overlay.active { display: flex; }
+    .modal-dialog { background: white; border-radius: var(--radius-lg); width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); animation: slideUp 0.3s; overflow: hidden; max-height: 90vh; overflow-y: auto; }
+    .modal-header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 22px 22px 16px; text-align: center; }
+    .modal-header i { font-size: 2.2rem; margin-bottom: 6px; display: block; }
+    .modal-header h2 { font-size: 1.2rem; margin: 0; }
+    .modal-header p { opacity: 0.9; font-size: 0.8rem; margin-top: 4px; }
+    .modal-body { padding: 20px 22px 22px; }
+    .modal-body input { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: var(--radius); font-size: 0.95rem; margin-bottom: 10px; }
+    .modal-body input:focus { border-color: var(--primary); outline: none; }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .fullscreen-modal { display: none; position: fixed; inset: 0; background: white; z-index: 3000; overflow-y: auto; }
+    .fullscreen-modal.active { display: block; }
+    .fullscreen-header { position: sticky; top: 0; background: white; padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; z-index: 10; gap: 10px; }
+    .fullscreen-content { max-width: 800px; margin: 0 auto; padding: 20px; }
+    .close-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--bg); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
+
+    .toast { position: fixed; bottom: 20px; right: 20px; padding: 14px 22px; border-radius: 50px; color: white; font-weight: 500; z-index: 99999; animation: slideUp 0.3s; font-size: 0.9rem; }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    .toast.warning { background: var(--warning); color: #333; }
+
+    .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.85); z-index: 5000; flex-direction: column; align-items: center; justify-content: center; }
+    .loading-overlay.active { display: flex; }
+    .spinner { width: 44px; height: 44px; border: 4px solid #ddd; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+    .empty-state i { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.4; }
+
+    .footer { background: white; border-top: 1px solid var(--border); padding: 25px 20px 15px; margin-top: 30px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+
+    .share-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .share-btn { padding: 7px 12px; border-radius: 50px; border: 2px solid var(--border); background: white; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
+    .share-btn:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+    .share-btn.copy-btn { background: var(--primary); color: white; border-color: var(--primary); }
+
+    @media (max-width: 600px) {
+      .nav { padding: 0.6rem 1rem; }
+      .tab { padding: 8px 10px; font-size: 0.75rem; }
+      .card { padding: 16px; }
+      .fullscreen-header { padding: 8px 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo" onclick="location.reload()"><i class="fas fa-book-open"></i> Z-Ansiklopedi</div>
+    <div id="auth-ui">
+      <button class="btn btn-primary btn-sm" onclick="openAuth('login')"><i class="fas fa-sign-in-alt"></i> Giriş</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-tab="home"><i class="fas fa-home"></i> Ana Sayfa</button>
+    <button class="tab" data-tab="feed"><i class="fas fa-newspaper"></i> Yazılar</button>
+    <button class="tab" data-tab="authors"><i class="fas fa-users"></i> Yazarlar</button>
+    <button class="tab" data-tab="write"><i class="fas fa-pen-fancy"></i> Yaz</button>
+    <button class="tab" data-tab="myposts"><i class="fas fa-list-check"></i> Yazılarım</button>
+    <button class="tab admin-tab" data-tab="admin" style="display:none;"><i class="fas fa-shield-haltered"></i> Admin</button>
+  </div>
+
+  <div id="view-home"><div class="stats" id="home-stats"></div><div id="home-content"></div></div>
+  <div id="view-feed" style="display:none;">
+    <input type="text" id="feed-search" placeholder="🔍 Ara..." oninput="searchPosts()" style="width:100%; padding:12px 16px; border:2px solid var(--border); border-radius:50px; font-size:1rem; margin-bottom:16px;">
+    <div id="feed-content"></div>
+  </div>
+  <div id="view-authors" style="display:none;"><div class="card"><h3><i class="fas fa-users"></i> Yazarlar</h3><div id="authors-list"></div></div></div>
+  <div id="view-write" style="display:none;">
+    <div class="card">
+      <h3><i class="fas fa-pen-fancy"></i> Yeni Yazı</h3>
+      <div id="write-blocked" style="display:none;"></div>
+      <div id="write-form">
+        <input type="text" id="post-title" placeholder="Başlık..." style="width:100%; padding:14px; border:2px solid var(--border); border-radius:var(--radius); font-size:1.1rem; font-weight:600; margin-bottom:12px;">
+        <div id="editor-container"></div>
+        <input type="file" id="img-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('img-upload').click()"><i class="fas fa-image"></i> Resim</button>
+        </div>
+        <button class="btn btn-primary btn-block" id="publish-btn" onclick="publishPost()" style="margin-top:12px;"><i class="fas fa-paper-plane"></i> Yayınla</button>
+      </div>
+    </div>
+  </div>
+  <div id="view-myposts" style="display:none;"><div class="card"><h3><i class="fas fa-list-check"></i> Yazılarım</h3><div id="myposts-content"></div></div></div>
+  <div id="view-admin" style="display:none;">
+    <div class="card" style="border:2px solid var(--admin);">
+      <h3><i class="fas fa-shield-haltered" style="color:var(--admin);"></i> Admin Paneli</h3>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+        <button class="btn btn-sm btn-primary" onclick="loadAdmin('flags')" style="background:var(--admin);">Şikayetler</button>
+        <button class="btn btn-sm btn-outline" onclick="loadAdmin('users')">Kullanıcılar</button>
+        <button class="btn btn-sm btn-outline" onclick="loadAdmin('banned')">Engelliler</button>
+      </div>
+      <div id="admin-content"></div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <p>© 2024 Z-Ansiklopedi | Özgür Bilgi Platformu | <span id="footer-stats"></span></p>
+</footer>
+
+<div id="loading-overlay" class="loading-overlay"><div class="spinner"></div><p style="margin-top:10px;font-weight:500;">Yükleniyor...</p></div>
+<div id="toast-container"></div>
+
+<div id="fullscreen-modal" class="fullscreen-modal">
+  <div class="fullscreen-header">
+    <button class="close-btn" onclick="closeFullscreen()"><i class="fas fa-times"></i></button>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <div id="fullscreen-share" class="share-btns"></div>
+      <div id="fullscreen-actions"></div>
+    </div>
+  </div>
+  <div class="fullscreen-content" id="fullscreen-content"></div>
+</div>
+
+<div id="auth-modal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header"><i id="auth-icon" class="fas fa-sign-in-alt"></i><h2 id="auth-title">Giriş Yap</h2><p id="auth-subtitle">Hoş geldiniz</p></div>
+    <div class="modal-body">
+      <input type="text" id="auth-username" placeholder="Kullanıcı adı">
+      <input type="password" id="auth-password" placeholder="Şifre">
+      <button class="btn btn-primary btn-block" id="auth-btn" onclick="handleAuth()">Giriş Yap</button>
+      <p style="text-align:center;margin-top:14px;cursor:pointer;color:var(--primary);font-weight:500;" id="auth-toggle" onclick="toggleAuthMode()">Hesabın yok mu? Kayıt Ol</p>
+    </div>
+  </div>
+</div>
+
+<div id="report-modal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header" style="background:linear-gradient(135deg,var(--danger),#b91c1c);"><i class="fas fa-flag"></i><h2>Şikayet Et</h2></div>
+    <div class="modal-body">
+      <input type="hidden" id="report-post-id"><input type="hidden" id="report-author">
+      <select id="report-reason" style="width:100%; padding:12px; border:2px solid var(--border); border-radius:var(--radius); margin-bottom:10px;"><option value="">Sebep seçin</option><option>Yanlış bilgi</option><option>Taraflı içerik</option><option>Küfür/Hakaret</option><option>Spam</option><option>Diğer</option></select>
+      <textarea id="report-desc" placeholder="Açıklama..." style="width:100%; padding:12px; border:2px solid var(--border); border-radius:var(--radius); min-height:70px;"></textarea>
+      <button class="btn btn-danger btn-block" onclick="submitReport()" style="margin-top:10px;">Gönder</button>
+      <button class="btn btn-outline btn-block" onclick="hideModal('report-modal')" style="margin-top:6px;">İptal</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script>
+// ==================== API ====================
+async function api(path, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  const token = localStorage.getItem('token');
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch('/api' + path, opts);
+  return res.json();
+}
+
+// ==================== STATE ====================
+let user = JSON.parse(localStorage.getItem('user') || 'null');
+let posts = [];
+let authors = [];
+let quill = null;
+let authMode = 'login';
+
+// ==================== HELPERS ====================
+function toast(msg, type) {
+  const t = document.createElement('div'); t.className = 'toast ' + type; t.textContent = msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+function showLoading() { document.getElementById('loading-overlay').classList.add('active'); }
+function hideLoading() { document.getElementById('loading-overlay').classList.remove('active'); }
+function showModal(id) { document.getElementById(id).classList.add('active'); }
+function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// ==================== AUTH ====================
+function updateAuthUI() {
+  const ui = document.getElementById('auth-ui');
+  if (user) {
+    const av = user.profile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=1a73e8&color=fff&size=28`;
+    ui.innerHTML = `
+      <div class="profile-badge" onclick="showModal('profile-modal')">
+        <img src="${av}" onerror="this.src='https://ui-avatars.com/api/?name=User&background=1a73e8&color=fff&size=28'">
+        ${user.username} ${user.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="logout()" style="border-color:#dc3545;color:#dc3545;"><i class="fas fa-sign-out-alt"></i></button>`;
+    document.querySelector('.admin-tab').style.display = user.isAdmin ? 'inline-flex' : 'none';
+  } else {
+    ui.innerHTML = '<button class="btn btn-primary btn-sm" onclick="openAuth(\'login\')"><i class="fas fa-sign-in-alt"></i> Giriş</button>';
+    document.querySelector('.admin-tab').style.display = 'none';
+  }
+}
+
+function openAuth(mode) {
+  authMode = mode;
+  document.getElementById('auth-title').textContent = mode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
+  document.getElementById('auth-subtitle').textContent = mode === 'login' ? 'Hoş geldiniz' : 'Hemen ücretsiz katılın';
+  document.getElementById('auth-icon').className = mode === 'login' ? 'fas fa-sign-in-alt' : 'fas fa-user-plus';
+  document.getElementById('auth-btn').innerHTML = mode === 'login' ? '<i class="fas fa-sign-in-alt"></i> Giriş Yap' : '<i class="fas fa-user-plus"></i> Kayıt Ol';
+  document.getElementById('auth-toggle').innerHTML = mode === 'login' ? 'Hesabın yok mu? <b>Kayıt Ol</b>' : 'Hesabın var mı? <b>Giriş Yap</b>';
+  document.getElementById('auth-username').value = '';
+  document.getElementById('auth-password').value = '';
+  showModal('auth-modal');
+}
+
+function toggleAuthMode() { openAuth(authMode === 'login' ? 'register' : 'login'); }
+
+async function handleAuth() {
+  const u = document.getElementById('auth-username').value.trim();
+  const p = document.getElementById('auth-password').value;
+  if (!u || !p) return toast('Tüm alanları doldurun!', 'error');
+  
+  showLoading();
+  const ep = authMode === 'login' ? '/auth/login' : '/auth/register';
+  const result = await api(ep, 'POST', { username: u, password: p });
+  hideLoading();
+  
+  if (result.success) {
+    if (authMode === 'login') {
+      localStorage.setItem('token', result.token);
+      user = result.user;
+      localStorage.setItem('user', JSON.stringify(user));
+      hideModal('auth-modal');
+      updateAuthUI();
+      loadHome();
+      toast(`Hoş geldin, ${u}! 🎉`, 'success');
+    } else {
+      toast('Kayıt başarılı! Giriş yapın.', 'success');
+      openAuth('login');
+    }
+  } else {
+    toast(result.message || 'Hata!', 'error');
+  }
+}
+
+function logout() {
+  localStorage.clear();
+  user = null;
+  updateAuthUI();
+  loadHome();
+  toast('Çıkış yapıldı.', 'warning');
+}
+
+// ==================== TABS ====================
+async function switchTab(tab) {
+  document.querySelectorAll('[id^="view-"]').forEach(v => v.style.display = 'none');
+  const ve = document.getElementById('view-' + tab);
+  if (ve) ve.style.display = 'block';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const btn = document.querySelector(`[data-tab="${tab}"]`);
+  if (btn) btn.classList.add('active');
+  
+  if (tab === 'home') await loadHome();
+  if (tab === 'feed') await loadFeed();
+  if (tab === 'authors') await loadAuthors();
+  if (tab === 'myposts') loadMyPosts();
+  if (tab === 'admin') loadAdmin('flags');
+  if (tab === 'write') {
+    if (!user) {
+      document.getElementById('view-write').innerHTML = '<div class="card empty-state"><i class="fas fa-lock"></i><h3>Giriş Yapın</h3><p>Yazı yazmak için giriş yapmalısınız.</p></div>';
+    } else if (!quill) {
+      setTimeout(() => {
+        quill = new Quill('#editor-container', { theme: 'snow', placeholder: 'Yazmaya başlayın...', modules: { toolbar: [['bold','italic','underline'],['blockquote'],[{header:[1,2,3,false]}],[{list:'ordered'},{list:'bullet'}],['link','video'],['table'],['clean']] } });
+      }, 100);
+    }
+  }
+}
+
+// ==================== HOME ====================
+async function loadHome() {
+  showLoading();
+  const result = await api('/posts/list');
+  hideLoading();
+  
+  if (result.success) {
+    posts = result.posts || [];
+    document.getElementById('home-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="fas fa-users"></i></div><div class="stat-number">${result.totalUsers || 0}</div><div class="stat-label">Yazar</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#e3f2fd;color:#1565c0;"><i class="fas fa-file-alt"></i></div><div class="stat-number">${result.totalPosts || 0}</div><div class="stat-label">Yazı</div></div>`;
+    document.getElementById('footer-stats').textContent = `${result.totalUsers || 0} yazar • ${result.totalPosts || 0} yazı`;
+    
+    const hc = document.getElementById('home-content');
+    hc.innerHTML = posts.length === 0 
+      ? '<div class="card empty-state"><i class="fas fa-book-open"></i><h3>Henüz yazı yok</h3><p>İlk yazıyı sen yaz!</p></div>'
+      : '<h3 style="margin-bottom:12px;">📌 Son Yazılar</h3>' + posts.slice(0, 8).map(p => `
+        <div class="card post-card" onclick="viewPost(${p.id})">
+          <strong>${p.title}</strong>
+          <p style="color:var(--text-muted);font-size:0.85rem;margin-top:4px;">${p.author} • ${p.date} • ${p.reads || 0} okunma</p>
+        </div>`).join('');
+  }
+}
+
+// ==================== FEED ====================
+async function loadFeed() {
+  showLoading();
+  const result = await api('/posts/list');
+  hideLoading();
+  if (result.success) { posts = result.posts || []; renderFeed(); }
+}
+
+function renderFeed(filtered = null) {
+  const list = filtered || posts;
+  document.getElementById('feed-content').innerHTML = list.length === 0 
+    ? '<div class="empty-state"><i class="fas fa-search"></i><p>Yazı bulunamadı.</p></div>'
+    : list.map(p => `<div class="card post-card" onclick="viewPost(${p.id})"><strong>${p.title}</strong><p style="color:var(--text-muted);font-size:0.85rem;">${p.author} • ${p.date} • ${p.reads || 0} okunma</p></div>`).join('');
+}
+
+function searchPosts() {
+  const t = document.getElementById('feed-search').value.toLowerCase();
+  renderFeed(t ? posts.filter(p => p.title.toLowerCase().includes(t) || p.author.toLowerCase().includes(t)) : null);
+}
+
+// ==================== AUTHORS ====================
+async function loadAuthors() {
+  showLoading();
+  const result = await api('/posts/list');
+  hideLoading();
+  if (result.success) {
+    posts = result.posts || [];
+    const map = {};
+    posts.forEach(p => { if (!map[p.author]) map[p.author] = { name: p.author, count: 0, reads: 0 }; map[p.author].count++; map[p.author].reads += (p.reads || 0); });
+    authors = Object.values(map).sort((a,b) => b.reads - a.reads);
+    document.getElementById('authors-list').innerHTML = authors.length === 0 
+      ? '<div class="empty-state"><i class="fas fa-users"></i><p>Henüz yazar yok.</p></div>'
+      : authors.map(a => `<div class="card post-card" onclick="viewAuthor('${a.name}')"><strong>${a.name}</strong><p style="color:var(--text-muted);font-size:0.85rem;">${a.count} yazı • ${a.reads} okunma</p></div>`).join('');
+  }
+}
+
+function viewAuthor(name) {
+  const ap = posts.filter(p => p.author === name);
+  document.getElementById('fullscreen-share').innerHTML = '';
+  document.getElementById('fullscreen-actions').innerHTML = '';
+  document.getElementById('fullscreen-content').innerHTML = `
+    <h2>${name}</h2><p style="color:var(--text-muted);">${ap.length} yazı</p><hr>
+    ${ap.map(p => `<div class="card post-card" onclick="viewPost(${p.id})"><strong>${p.title}</strong><p style="color:var(--text-muted);font-size:0.85rem;">${p.date} • ${p.reads || 0} okunma</p></div>`).join('')}`;
+  document.getElementById('fullscreen-modal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+// ==================== VIEW POST ====================
+async function viewPost(id) {
+  showLoading();
+  const result = await api('/posts/get/' + id);
+  hideLoading();
+  if (result.success) {
+    const p = result.post;
+    const isOwner = user && user.username === p.author;
+    document.getElementById('fullscreen-share').innerHTML = `
+      <button class="share-btn copy-btn" onclick="copyLink(${p.id})"><i class="fas fa-link"></i></button>
+      <button class="share-btn" onclick="shareTwitter(${p.id})"><i class="fab fa-twitter"></i></button>
+      <button class="share-btn" onclick="shareFB(${p.id})"><i class="fab fa-facebook"></i></button>
+      ${!isOwner ? `<button class="share-btn" style="border-color:#fee2e2;color:var(--danger);" onclick="openReport(${p.id},'${p.author}')"><i class="fas fa-flag"></i> Şikayet</button>` : ''}`;
+    document.getElementById('fullscreen-actions').innerHTML = isOwner 
+      ? `<button class="share-btn" style="color:var(--danger);" onclick="deletePost(${p.id})"><i class="fas fa-trash"></i></button>` : '';
+    document.getElementById('fullscreen-content').innerHTML = `
+      <h1 style="font-size:1.8rem;margin-bottom:8px;">${p.title}</h1>
+      <p style="color:var(--text-muted);margin-bottom:16px;">${p.author} • ${p.date} • ${p.reads || 0} okunma</p>
+      <hr style="margin:16px 0;"><div style="line-height:1.9;font-size:1.05rem;">${p.content}</div>`;
+    document.getElementById('fullscreen-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    try { history.replaceState(null, p.title, `#post-${p.id}`); } catch(e) {}
+  }
+}
+
+function closeFullscreen() {
+  document.getElementById('fullscreen-modal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// ==================== SHARE ====================
+function getUrl(id) { return window.location.origin + '/#post-' + id; }
+function copyLink(id) { navigator.clipboard.writeText(getUrl(id)).then(() => toast('Link kopyalandı!', 'success')); }
+function shareTwitter(id) { const p = posts.find(x => x.id === id); window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(p?.title||'')}&url=${encodeURIComponent(getUrl(id))}`, '_blank'); }
+function shareFB(id) { window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getUrl(id))}`, '_blank'); }
+
+// ==================== REPORT ====================
+function openReport(postId, author) {
+  document.getElementById('report-post-id').value = postId;
+  document.getElementById('report-author').value = author;
+  showModal('report-modal');
+}
+
+async function submitReport() {
+  const reason = document.getElementById('report-reason').value;
+  if (!reason) return toast('Sebep seçin!', 'error');
+  showLoading();
+  const result = await api('/posts/report', 'POST', {
+    postId: parseInt(document.getElementById('report-post-id').value),
+    author: document.getElementById('report-author').value,
+    reason,
+    description: document.getElementById('report-desc').value
+  });
+  hideLoading();
+  if (result.success) { toast('Şikayet iletildi!', 'success'); hideModal('report-modal'); }
+  else toast('Hata!', 'error');
+}
+
+// ==================== PUBLISH ====================
+async function publishPost() {
+  if (!user) return toast('Giriş yapın!', 'error');
+  const title = document.getElementById('post-title').value.trim();
+  const content = quill ? quill.root.innerHTML : '';
+  if (!title) return toast('Başlık girin!', 'error');
+  
+  const btn = document.getElementById('publish-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yayınlanıyor...';
+  showLoading();
+  const result = await api('/posts/create', 'POST', { title, content });
+  hideLoading();
+  
+  if (result.success) {
+    toast('🎉 Yayınlandı!', 'success');
+    document.getElementById('post-title').value = '';
+    if (quill) quill.setText('');
+    loadHome();
+  } else toast(result.message || 'Hata!', 'error');
+  btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Yayınla';
+}
+
+// ==================== DELETE ====================
+async function deletePost(id) {
+  if (!confirm('Silmek istediğinize emin misiniz?')) return;
+  showLoading();
+  const result = await api('/posts/delete/' + id, 'DELETE');
+  hideLoading();
+  if (result.success) { toast('Silindi!', 'warning'); closeFullscreen(); loadHome(); }
+  else toast('Hata!', 'error');
+}
+
+// ==================== MY POSTS ====================
+function loadMyPosts() {
+  if (!user) { document.getElementById('myposts-content').innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><h3>Giriş yapın</h3></div>'; return; }
+  const mp = posts.filter(p => p.author === user.username);
+  document.getElementById('myposts-content').innerHTML = mp.length === 0 
+    ? '<div class="empty-state"><i class="fas fa-pen-fancy"></i><h3>Henüz yazınız yok</h3></div>'
+    : mp.map(p => `<div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="cursor:pointer;flex:1;" onclick="viewPost(${p.id})"><strong>${p.title}</strong><p style="color:var(--text-muted);font-size:0.8rem;">${p.date} • ${p.reads||0} okunma</p></div>
+        <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;" onclick="event.stopPropagation();deletePost(${p.id})"><i class="fas fa-trash"></i></button>
+      </div>`).join('');
+}
+
+// ==================== IMAGE ====================
+function fileToBase64(file) {
+  return new Promise(resolve => {
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > 800) { h = (800/w)*h; w = 800; }
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = r.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+async function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5*1024*1024) { toast('Resim 5MBdan küçük olmalı!', 'error'); return; }
+  if (!quill) return;
+  const b64 = await fileToBase64(file);
+  const range = quill.getSelection(true);
+  quill.clipboard.dangerouslyPasteHTML(range.index, `<img src="${b64}" style="max-width:100%;border-radius:8px;">`);
+  event.target.value = '';
+}
+
+// ==================== ADMIN ====================
+async function loadAdmin(section) {
+  if (!user || !user.isAdmin) { document.getElementById('admin-content').innerHTML = '<p style="color:var(--danger);">Yetkisiz erişim!</p>'; return; }
+  showLoading();
+  const result = await api('/admin/' + section);
+  hideLoading();
+  const c = document.getElementById('admin-content');
+  if (section === 'flags') {
+    const reps = result.reports || [];
+    c.innerHTML = `<h4>Şikayetler (${reps.length})</h4>` + (reps.length === 0 ? '<p>Bekleyen şikayet yok.</p>' : reps.map(r => `
+      <div style="background:#fffbeb;padding:10px;border-radius:8px;margin-bottom:8px;border:1px solid #fde68a;">
+        <strong>${r.reason}</strong> - ${r.author}<br><small>${r.reporter} • ${r.date}</small>
+        <div style="margin-top:6px;display:flex;gap:6px;">
+          <button class="btn btn-sm btn-warning" onclick="adminAction('warn','${r.author}',${r.id})">Uyar</button>
+          <button class="btn btn-sm btn-danger" onclick="adminAction('ban','${r.author}',${r.id})">Engelle</button>
+          <button class="btn btn-sm btn-outline" onclick="adminAction('dismiss','',${r.id})">Geç</button>
+        </div>
+      </div>`).join(''));
+  } else {
+    c.innerHTML = '<p>Veri yok.</p>';
+  }
+}
+
+async function adminAction(action, username, reportId) {
+  if (!confirm('Emin misiniz?')) return;
+  showLoading();
+  const result = await api('/admin/' + action, 'POST', { username, reportId });
+  hideLoading();
+  toast(result.message || 'İşlem yapıldı!', result.success ? 'success' : 'error');
+  if (result.success) loadAdmin('flags');
+}
+
+// ==================== EVENTS ====================
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('active');
+  const tab = e.target.closest('.tab');
+  if (tab) { e.preventDefault(); switchTab(tab.dataset.tab); }
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    if (document.getElementById('fullscreen-modal').classList.contains('active')) closeFullscreen();
+    else document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+  }
+});
+
+// ==================== INIT ====================
+window.onload = async function() {
+  updateAuthUI();
+  const token = localStorage.getItem('token');
+  if (token && !user) {
+    const r = await api('/auth/me');
+    if (r.success) { user = r.user; localStorage.setItem('user', JSON.stringify(user)); updateAuthUI(); }
+    else localStorage.clear();
+  }
+  await loadHome();
+  
+  const hash = window.location.hash;
+  if (hash.startsWith('#post-')) {
+    const id = parseInt(hash.replace('#post-', ''));
+    if (id) viewPost(id);
+  }
+};
+</script>
+</body>
+</html>
